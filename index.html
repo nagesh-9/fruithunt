@@ -95,6 +95,32 @@
             background-color: #5a6268; /* Darker Grey */
         }
 
+        /* Mobile-only control buttons */
+        .mobile-canvas-controls {
+            display: none; /* Hidden by default on larger screens */
+            justify-content: space-between;
+            width: 100%; /* Take full width of game-container */
+            margin-bottom: 10px; /* Space between buttons and canvas */
+        }
+
+        .mobile-only-button {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            width: 48%; /* Take roughly half width each */
+            background-color: #007bff; /* Blue for movement buttons */
+        }
+
+        .mobile-only-button:hover {
+            background-color: #0056b3; /* Darker blue */
+        }
+
+        /* Media query to show mobile controls on smaller screens */
+        @media (max-width: 768px) {
+            .mobile-canvas-controls {
+                display: flex; /* Show on mobile/tablet */
+            }
+        }
+
 
         #gameCanvas {
             background-color: rgba(255, 255, 255, 0.6); /* Slightly transparent canvas background */
@@ -194,6 +220,11 @@
             <div class="lives-board">Lives: <span id="lives">5</span></div>
             <div class="high-score-board">High Score: <span id="highScore">0</span></div>
         </div>
+        <!-- New mobile-only control buttons -->
+        <div class="mobile-canvas-controls">
+            <button id="moveLeft" class="game-button mobile-only-button">◀ Left</button>
+            <button id="moveRight" class="game-button mobile-only-button">Right ▶</button>
+        </div>
         <canvas id="gameCanvas"></canvas>
         <div class="game-message" id="gameMessage"></div>
     </div>
@@ -246,7 +277,7 @@
             { name: 'apple', emoji: '🍎', type: 'good' },
             { name: 'banana', emoji: '🍌', type: 'good' },
             { name: 'grape', emoji: '🍇', type: 'good' },
-            { name: 'lemon', emoji: '🍋', type: 'good' },
+            { name: 'lemon', emoji: '�', type: 'good' },
             { name: 'orange', emoji: '🍊', type: 'good' },
             // Bad objects (bombs, knives)
             { name: 'bomb', emoji: '💣', type: 'bad' },
@@ -331,8 +362,9 @@
             canvas.height = Math.min(window.innerHeight * 0.6, 400); // Max height 400px or 60% of window
 
             // Adjust player initial position after resize
+            // Elevated by 30px from the bottom to ensure visibility
             player.x = (canvas.width - player.width) / 2;
-            player.y = canvas.height - player.height - 10; // 10px from bottom
+            player.y = canvas.height - player.height - 30;
         }
 
         // Call resize on initial load and on window resize
@@ -374,9 +406,21 @@
             ctx.fillText(obj.emoji, obj.x + objectWidth / 2, obj.y + objectHeight / 2);
         }
 
+        // --- Player Movement Flags for Buttons ---
+        let moveLeftPressed = false;
+        let moveRightPressed = false;
+
         // Function to update game state (move objects, check collisions, handle lives)
         function update() {
             if (!gameRunning || gameOver) return;
+
+            // Handle keyboard and button movement
+            if (moveLeftPressed) {
+                player.x = Math.max(0, player.x - player.speed);
+            }
+            if (moveRightPressed) {
+                player.x = Math.min(canvas.width - player.width, player.x + player.speed);
+            }
 
             // Move objects
             for (let i = 0; i < objects.length; i++) {
@@ -525,8 +569,7 @@
             highScoreDisplay.textContent = highScore;
         }
 
-        // Event Listeners for Player Movement
-        // Keyboard controls
+        // Event Listeners for Player Movement (Keyboard)
         document.addEventListener('keydown', (e) => {
             if (gameRunning && !gameOver) {
                 if (e.key === 'ArrowLeft' || e.key === 'a') {
@@ -537,7 +580,7 @@
             }
         });
 
-        // Touch controls (for mobile responsiveness)
+        // Event Listeners for Player Movement (Touch Swipe on Canvas)
         let touchStartX = 0;
         canvas.addEventListener('touchstart', (e) => {
             if (gameRunning && !gameOver) {
@@ -560,7 +603,46 @@
             }
         });
 
-        // Button event listeners
+        // Event Listeners for Mobile-Only Buttons (Tap and Hold)
+        const moveLeftButton = document.getElementById('moveLeft');
+        const moveRightButton = document.getElementById('moveRight');
+
+        // Flags for continuous movement with buttons
+        let moveLeftButtonPressed = false;
+        let moveRightButtonPressed = false;
+
+        // Left button events
+        moveLeftButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent default touch behavior
+            moveLeftButtonPressed = true;
+        });
+        moveLeftButton.addEventListener('touchend', () => {
+            moveLeftButtonPressed = false;
+        });
+        moveLeftButton.addEventListener('mousedown', () => { // For desktop click testing
+            moveLeftButtonPressed = true;
+        });
+        moveLeftButton.addEventListener('mouseup', () => { // For desktop click testing
+            moveLeftButtonPressed = false;
+        });
+
+        // Right button events
+        moveRightButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent default touch behavior
+            moveRightButtonPressed = true;
+        });
+        moveRightButton.addEventListener('touchend', () => {
+            moveRightButtonPressed = false;
+        });
+        moveRightButton.addEventListener('mousedown', () => { // For desktop click testing
+            moveRightButtonPressed = true;
+        });
+        moveRightButton.addEventListener('mouseup', () => { // For desktop click testing
+            moveRightButtonPressed = false;
+        });
+
+
+        // Button event listeners (Start, Reset, Silent Mode)
         startButton.addEventListener('click', startGame);
         resetButton.addEventListener('click', resetGame);
         silentModeButton.addEventListener('click', toggleMute);
@@ -582,3 +664,4 @@
     </script>
 </body>
 </html>
+�
