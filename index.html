@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch the Falling Objects</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif; /* Using Inter font */
+            color: #333;
+            overflow: hidden; /* Prevent scrollbars */
+            transition: background-image 5s ease-in-out; /* Smooth transition for background */
+            background-size: cover; /* Ensure background covers the entire body */
+            background-position: center; /* Center the background image */
+        }
+
+        /* Gradient backgrounds for different times of day */
+        .morning-sky {
+            background-image: linear-gradient(to top, #87CEEB, #ADD8E6, #FFDAB9); /* Sky Blue, Light Blue, Peach Puff */
+        }
+        .afternoon-sky {
+            background-image: linear-gradient(to top, #6495ED, #87CEEB); /* Cornflower Blue, Sky Blue */
+        }
+        .evening-sky {
+            background-image: linear-gradient(to top, #4682B4, #8A2BE2, #800080); /* Steel Blue, Blue Violet, Purple */
+        }
+        .night-sky {
+            background-image: linear-gradient(to top, #191970, #000080, #000000); /* Midnight Blue, Navy, Black */
+        }
+
+        .game-container {
+            background-color: rgba(255, 255, 255, 0.9); /* Slightly transparent white for content */
+            border: 5px solid #4682b4; /* Steel Blue */
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3); /* Stronger shadow */
+            padding: 20px;
+            text-align: center;
+            position: relative;
+            max-width: 90%; /* Responsive width */
+            box-sizing: border-box; /* Include padding in width */
+        }
+
+        h1 {
+            color: #2f4f4f; /* Dark Slate Gray */
+            margin-bottom: 15px;
+            font-size: 2.5em; /* Larger heading */
+        }
+
+        /* Styling for the controls (buttons) at the top */
+        .controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap; /* Allow buttons to wrap on smaller screens */
+            gap: 15px;
+            margin-bottom: 20px; /* Add margin below buttons */
+            margin-top: 0; /* Remove top margin as they are at the top now */
+        }
+
+        .game-button {
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            outline: none;
+        }
+
+        .game-button:hover {
+            background-color: #45a049; /* Darker Green */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Specific style for the silent mode button */
+        #silentModeButton {
+            background-color: #6c757d; /* Grey */
+        }
+        #silentModeButton:hover {
+            background-color: #5a6268; /* Darker Grey */
+        }
+
+
+        #gameCanvas {
+            background-color: rgba(255, 255, 255, 0.6); /* Slightly transparent canvas background */
+            border: 2px solid #6a5acd; /* Slate Blue */
+            border-radius: 10px;
+            display: block; /* Remove extra space below canvas */
+            margin: 0 auto 20px auto; /* Center canvas, add bottom margin */
+            touch-action: none; /* Prevent default touch actions like scrolling/zooming */
+        }
+
+        .score-lives-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px; /* Space between score and lives */
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .score-board {
+            color: #8a2be2; /* Blue Violet */
+        }
+
+        .lives-board {
+            color: #dc143c; /* Crimson */
+        }
+
+        .high-score-board {
+            color: #daa520; /* Goldenrod */
+            margin-left: 30px; /* Space from lives */
+        }
+
+        .game-message {
+            font-size: 2em;
+            color: #dc143c; /* Crimson */
+            font-weight: bold;
+            margin-top: 15px;
+            min-height: 30px; /* Reserve space to prevent CLS */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+            .score-lives-container {
+                font-size: 1.5em;
+                gap: 20px;
+            }
+            .game-message {
+                font-size: 1.5em;
+            }
+            .game-button {
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+            .game-container {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.8em;
+            }
+            .score-lives-container {
+                font-size: 1.2em;
+                gap: 15px;
+                flex-direction: column; /* Stack score/lives on small screens */
+            }
+            .score-board, .lives-board, .high-score-board {
+                margin-left: 0; /* Remove horizontal margin when stacked */
+            }
+            .game-message {
+                font-size: 1.2em;
+            }
+            .game-button {
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
+            .game-container {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Catch the Falling Objects!</h1>
+        <div class="controls">
+            <button id="startButton" class="game-button">Start Game</button>
+            <button id="resetButton" class="game-button" style="background-color: #f44336;">Reset Game</button>
+            <button id="silentModeButton" class="game-button">Silent Mode: OFF</button>
+        </div>
+        <div class="score-lives-container">
+            <div class="score-board">Score: <span id="score">0</span></div>
+            <div class="lives-board">Lives: <span id="lives">5</span></div>
+            <div class="high-score-board">High Score: <span id="highScore">0</span></div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-message" id="gameMessage"></div>
+    </div>
+
+    <script>
+        // Get the canvas element and its 2D rendering context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Get score, lives, high score, message, and button elements
+        const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
+        const highScoreDisplay = document.getElementById('highScore');
+        const gameMessage = document.getElementById('gameMessage');
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const silentModeButton = document.getElementById('silentModeButton');
+        const body = document.body; // Get the body element for background changes
+
+        // Game state variables
+        let score = 0;
+        let lives = 5; // Player starts with 5 lives
+        let highScore = 0; // High score variable
+        let gameOver = false;
+        let gameRunning = false;
+        let animationFrameId; // To store the requestAnimationFrame ID
+        let isMuted = false; // State for silent mode
+
+        // Player (basket) properties
+        const player = {
+            x: 0, // Initial x position (will be centered)
+            y: 0, // Initial y position (will be at the bottom)
+            width: 100,
+            height: 30, // Increased height for basket shape
+            color: '#8B4513', // Saddle Brown (for basket)
+            speed: 35 // Significantly increased speed for faster movement
+        };
+
+        // Array to hold falling objects
+        const objects = [];
+        const objectWidth = 30;
+        const objectHeight = 30;
+        const objectSpeed = 1.5; // Speed of falling objects
+        let objectSpawnInterval = 1000; // Milliseconds between object spawns
+        let lastSpawnTime = 0;
+
+        // Define different object types with their emojis and properties
+        const objectTypes = [
+            // Good objects (fruits)
+            { name: 'apple', emoji: '🍎', type: 'good' },
+            { name: 'banana', emoji: '🍌', type: 'good' },
+            { name: 'grape', emoji: '🍇', type: 'good' },
+            { name: 'lemon', emoji: '🍋', type: 'good' },
+            { name: 'orange', emoji: '🍊', type: 'good' },
+            // Bad objects (bombs, knives)
+            { name: 'bomb', emoji: '💣', type: 'bad' },
+            { name: 'knife', emoji: '🔪', type: 'bad' }
+        ];
+
+        // --- Audio Setup ---
+        let backgroundMusicAudio; // HTML Audio element for background music
+        let fruitCatchSound; // Tone.js for fruit catch sound
+        let dangerousObjectSound; // Tone.js for dangerous object sound
+
+        function setupAudio() {
+            // HTML Audio element for background music
+            // IMPORTANT: Replace 'YOUR_GITHUB_PAGES_AUDIO_URL_HERE.mp3' with the direct public URL to your hosted audio file.
+            // Example: If your GitHub username is 'youruser' and repo is 'my-game', and audio file is 'background_music.mp3'
+            // The URL would be: 'https://youruser.github.io/my-game/background_music.mp3'
+            backgroundMusicAudio = new Audio('YOUR_GITHUB_PAGES_AUDIO_URL_HERE.mp3');
+            backgroundMusicAudio.loop = true; // Loop the music
+            backgroundMusicAudio.volume = 0.4; // Background music volume
+
+            // Tone.js for fruit catch sound
+            fruitCatchSound = new Tone.Synth({
+                oscillator: { type: "sine" },
+                envelope: {
+                    attack: 0.01,
+                    decay: 0.1,
+                    sustain: 0.05,
+                    release: 0.2
+                }
+            }).toDestination();
+
+            // Tone.js for dangerous object sound (blasting sound using NoiseSynth)
+            dangerousObjectSound = new Tone.NoiseSynth({
+                noise: {
+                    type: "white" // White noise for a harsh, blasting effect
+                },
+                envelope: {
+                    attack: 0.001, // Very fast attack
+                    decay: 0.3,   // Quick decay
+                    sustain: 0,   // No sustain
+                    release: 0.1  // Fast release
+                }
+            }).toDestination();
+            dangerousObjectSound.volume.value = -5; // Adjust volume for blast
+        }
+
+        // --- Silent Mode Toggle ---
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (isMuted) {
+                backgroundMusicAudio.pause(); // Pause HTML audio
+                Tone.Destination.mute = true; // Mute all Tone.js audio
+                silentModeButton.textContent = 'Silent Mode: ON';
+                silentModeButton.style.backgroundColor = '#dc3545'; /* Red for ON */
+            } else {
+                if (gameRunning) { // Only play music if game is running
+                    // Attempt to play audio, handling potential errors
+                    backgroundMusicAudio.play().catch(e => console.error("Audio play failed:", e));
+                }
+                Tone.Destination.mute = false; // Unmute all Tone.js audio
+                silentModeButton.textContent = 'Silent Mode: OFF';
+                silentModeButton.style.backgroundColor = '#6c757d'; /* Grey for OFF */
+            }
+        }
+
+        // Call setupAudio once on load
+        window.addEventListener('load', setupAudio);
+
+        // --- Background Rotation Setup ---
+        const skyClasses = ['morning-sky', 'afternoon-sky', 'evening-sky', 'night-sky'];
+        let currentSkyIndex = 0;
+        const skyChangeInterval = 15000; // Change sky every 15 seconds (adjust as needed)
+        let skyIntervalId;
+
+        function rotateBackground() {
+            body.classList.remove(...skyClasses); // Remove all existing sky classes
+            currentSkyIndex = (currentSkyIndex + 1) % skyClasses.length; // Cycle through classes
+            body.classList.add(skyClasses[currentSkyIndex]); // Add the new sky class
+        }
+
+        // Function to resize the canvas dynamically
+        function resizeCanvas() {
+            canvas.width = Math.min(window.innerWidth * 0.8, 600); // Max width 600px or 80% of window
+            canvas.height = Math.min(window.innerHeight * 0.6, 400); // Max height 400px or 60% of window
+
+            // Adjust player initial position after resize
+            player.x = (canvas.width - player.width) / 2;
+            player.y = canvas.height - player.height - 10; // 10px from bottom
+        }
+
+        // Call resize on initial load and on window resize
+        window.addEventListener('load', resizeCanvas);
+        window.addEventListener('resize', resizeCanvas);
+
+        // Function to draw the player (basket shape)
+        function drawPlayer() {
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            // Draw the main body of the basket (trapezoid-like)
+            ctx.moveTo(player.x, player.y + player.height); // Bottom-left
+            ctx.lineTo(player.x + player.width, player.y + player.height); // Bottom-right
+            ctx.lineTo(player.x + player.width - 15, player.y); // Top-right (slanted in)
+            ctx.lineTo(player.x + 15, player.y); // Top-left (slanted in)
+            ctx.closePath();
+            ctx.fill();
+
+            // Add a darker rim for the basket
+            ctx.strokeStyle = '#5A2C00'; // Darker brown
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Optional: Draw a handle (simple arc)
+            ctx.beginPath();
+            ctx.arc(player.x + player.width / 2, player.y, player.width / 3, Math.PI, 2 * Math.PI);
+            ctx.strokeStyle = '#5A2C00';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        // Function to draw a falling object (emojis)
+        function drawObject(obj) {
+            // Set font for emoji
+            ctx.font = `${objectWidth * 0.9}px Arial`; // Adjust font size based on objectWidth
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(obj.emoji, obj.x + objectWidth / 2, obj.y + objectHeight / 2);
+        }
+
+        // Function to update game state (move objects, check collisions, handle lives)
+        function update() {
+            if (!gameRunning || gameOver) return;
+
+            // Move objects
+            for (let i = 0; i < objects.length; i++) {
+                objects[i].y += objectSpeed;
+
+                // Check for collision with player (basket)
+                if (
+                    objects[i].x < player.x + player.width &&
+                    objects[i].x + objectWidth > player.x &&
+                    objects[i].y + objectHeight > player.y &&
+                    objects[i].y < player.y + player.height
+                ) {
+                    // Collision detected!
+                    if (objects[i].type === 'good') {
+                        score++; // Increase score for good objects
+                        scoreDisplay.textContent = score;
+                        if (!isMuted) fruitCatchSound.triggerAttackRelease("C5", "8n"); // Play fruit catch sound
+                    } else if (objects[i].type === 'bad') {
+                        lives--; // Lose a life for bad objects
+                        livesDisplay.textContent = lives;
+                        if (!isMuted) dangerousObjectSound.triggerAttackRelease("8n"); // Play dangerous object sound (NoiseSynth takes duration, not note)
+                        if (lives <= 0) {
+                            gameOver = true;
+                            gameRunning = false;
+                            gameMessage.textContent = 'Game Over! You caught a dangerous object and ran out of lives.';
+                            startButton.disabled = false; // Enable start button for a new game
+                            cancelAnimationFrame(animationFrameId); // Stop the game loop
+                            // Update high score if current score is greater
+                            if (score > highScore) {
+                                highScore = score;
+                                localStorage.setItem('highScore', highScore);
+                                highScoreDisplay.textContent = highScore;
+                            }
+                        }
+                    }
+                    objects.splice(i, 1); // Remove the caught object (good or bad)
+                    i--; // Decrement i because we removed an element
+                } else if (objects[i].y + objectHeight > canvas.height) {
+                    // Object fell off the bottom of the screen
+                    // No penalty for missing objects (good or bad)
+                    objects.splice(i, 1); // Remove the missed object
+                    i--; // Decrement i because we removed an element
+                }
+            }
+
+            // Spawn new objects
+            const currentTime = Date.now();
+            if (currentTime - lastSpawnTime > objectSpawnInterval) {
+                const randomObject = objectTypes[Math.floor(Math.random() * objectTypes.length)];
+                objects.push({
+                    x: Math.random() * (canvas.width - objectWidth),
+                    y: -objectHeight, // Start above the canvas
+                    emoji: randomObject.emoji,
+                    type: randomObject.type
+                });
+                lastSpawnTime = currentTime;
+
+                // Gradually increase difficulty by reducing spawn interval (up to a limit)
+                // This will make objects appear more frequently
+                if (objectSpawnInterval > 300) {
+                    objectSpawnInterval -= 10;
+                }
+            }
+        }
+
+        // Main game loop
+        function gameLoop() {
+            // Clear the canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Update game state
+            update();
+
+            // Draw everything
+            drawPlayer();
+            objects.forEach(drawObject);
+
+            // Request next frame if game is running
+            if (gameRunning && !gameOver) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Function to start the game
+        async function startGame() {
+            if (gameRunning) return; // Prevent multiple starts
+
+            // Start Tone.js audio context on user gesture
+            if (Tone.context.state !== 'running') {
+                await Tone.start();
+            }
+
+            score = 0;
+            lives = 5; // Reset lives
+            scoreDisplay.textContent = score;
+            livesDisplay.textContent = lives;
+            gameOver = false;
+            gameRunning = true;
+            objects.length = 0; // Clear all existing objects
+            gameMessage.textContent = ''; // Clear any game over message
+            objectSpawnInterval = 1000; // Reset spawn interval
+            lastSpawnTime = Date.now(); // Reset last spawn time
+            resizeCanvas(); // Ensure player is positioned correctly
+
+            startButton.disabled = true; // Disable start button while game is running
+
+            // Start background music if not muted
+            if (!isMuted) {
+                backgroundMusicAudio.play().catch(e => console.error("Audio play failed:", e));
+            }
+            Tone.Destination.mute = isMuted; // Apply mute state for Tone.js sounds
+
+            // Start background rotation
+            rotateBackground(); // Set initial background
+            skyIntervalId = setInterval(rotateBackground, skyChangeInterval);
+
+            gameLoop(); // Start the game loop
+        }
+
+        // Function to reset the game without immediately starting
+        function resetGame() {
+            cancelAnimationFrame(animationFrameId); // Stop any ongoing animation
+            gameRunning = false;
+            gameOver = false;
+            score = 0;
+            lives = 5; // Reset lives
+            scoreDisplay.textContent = score;
+            livesDisplay.textContent = lives;
+            objects.length = 0;
+            gameMessage.textContent = 'Press Start Game to begin!';
+            objectSpawnInterval = 1000;
+            lastSpawnTime = 0;
+            startButton.disabled = false; // Enable start button
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+            drawPlayer(); // Draw player in initial position
+
+            // Stop background music and rotation
+            backgroundMusicAudio.pause(); // Pause HTML audio
+            backgroundMusicAudio.currentTime = 0; // Reset audio to start
+            Tone.Transport.stop(); // Stop Tone.js transport if it was running (for future use)
+            clearInterval(skyIntervalId);
+            body.classList.remove(...skyClasses); // Clear sky classes
+            body.classList.add('morning-sky'); // Reset to morning sky
+
+            // Update high score display in case it was just set
+            highScoreDisplay.textContent = highScore;
+        }
+
+        // Event Listeners for Player Movement
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (gameRunning && !gameOver) {
+                if (e.key === 'ArrowLeft' || e.key === 'a') {
+                    player.x = Math.max(0, player.x - player.speed);
+                } else if (e.key === 'ArrowRight' || e.key === 'd') {
+                    player.x = Math.min(canvas.width - player.width, player.x + player.speed);
+                }
+            }
+        });
+
+        // Touch controls (for mobile responsiveness)
+        let touchStartX = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            if (gameRunning && !gameOver) {
+                e.preventDefault(); // Prevent scrolling
+                touchStartX = e.touches[0].clientX;
+            }
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameRunning && !gameOver) {
+                e.preventDefault(); // Prevent scrolling
+                const touchCurrentX = e.touches[0].clientX;
+                const deltaX = touchCurrentX - touchStartX;
+
+                // Adjust player position based on touch movement
+                player.x += deltaX * 0.5; // Multiplier for sensitivity
+                player.x = Math.max(0, Math.min(canvas.width - player.width, player.x));
+
+                touchStartX = touchCurrentX; // Update start for next move
+            }
+        });
+
+        // Button event listeners
+        startButton.addEventListener('click', startGame);
+        resetButton.addEventListener('click', resetGame);
+        silentModeButton.addEventListener('click', toggleMute);
+
+        // Initial setup when the page loads
+        window.onload = function() {
+            // Load high score from local storage
+            const savedHighScore = localStorage.getItem('highScore');
+            if (savedHighScore !== null) {
+                highScore = parseInt(savedHighScore, 10);
+            }
+            highScoreDisplay.textContent = highScore;
+
+            resizeCanvas(); // Set initial canvas size
+            resetGame(); // Set initial game state and display message
+            body.classList.add('morning-sky'); // Set initial background to morning
+        };
+
+    </script>
+</body>
+</html>
