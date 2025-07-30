@@ -45,6 +45,10 @@
             position: relative;
             max-width: 90%; /* Responsive width */
             box-sizing: border-box; /* Include padding in width */
+            display: flex; /* Use flexbox for vertical alignment */
+            flex-direction: column;
+            justify-content: space-between; /* Distribute space vertically */
+            min-height: 80vh; /* Ensure it takes up enough height on mobile */
         }
 
         h1 {
@@ -119,6 +123,29 @@
             .mobile-canvas-controls {
                 display: flex; /* Show on mobile/tablet */
             }
+            .game-container {
+                padding: 10px; /* Reduce padding on mobile */
+                min-height: unset; /* Let height adjust to content */
+            }
+            .controls {
+                gap: 10px; /* Reduce gap between main buttons */
+                margin-bottom: 15px;
+            }
+            .game-button {
+                padding: 8px 18px; /* Smaller padding for buttons */
+                font-size: 1em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-button {
+                padding: 6px 12px; /* Even smaller padding for very small screens */
+                font-size: 0.9em;
+            }
+            .mobile-only-button {
+                padding: 8px 15px;
+                font-size: 1em;
+            }
         }
 
 
@@ -127,14 +154,15 @@
             border: 2px solid #6a5acd; /* Slate Blue */
             border-radius: 10px;
             display: block; /* Remove extra space below canvas */
-            margin: 0 auto 20px auto; /* Center canvas, add bottom margin */
-            touch-action: none; /* Prevent default touch actions like scrolling/zooming */
+            margin: 0 auto; /* Center canvas horizontally */
+            flex-grow: 1; /* Allow canvas to grow and take available space */
         }
 
         .score-lives-container {
             display: flex;
             justify-content: center;
             gap: 30px; /* Space between score and lives */
+            margin-top: 15px; /* Add margin above score/lives */
             margin-bottom: 20px;
             font-size: 1.8em;
             font-weight: bold;
@@ -161,48 +189,17 @@
             min-height: 30px; /* Reserve space to prevent CLS */
         }
 
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2em;
-            }
-            .score-lives-container {
-                font-size: 1.5em;
-                gap: 20px;
-            }
-            .game-message {
-                font-size: 1.5em;
-            }
-            .game-button {
-                padding: 10px 20px;
-                font-size: 1em;
-            }
-            .game-container {
-                padding: 15px;
-            }
-        }
-
+        /* Responsive adjustments for score/lives container */
         @media (max-width: 480px) {
-            h1 {
-                font-size: 1.8em;
-            }
             .score-lives-container {
                 font-size: 1.2em;
                 gap: 15px;
                 flex-direction: column; /* Stack score/lives on small screens */
+                margin-top: 10px; /* Adjust top margin for stacked layout */
+                margin-bottom: 10px; /* Adjust bottom margin for stacked layout */
             }
             .score-board, .lives-board, .high-score-board {
                 margin-left: 0; /* Remove horizontal margin when stacked */
-            }
-            .game-message {
-                font-size: 1.2em;
-            }
-            .game-button {
-                padding: 8px 15px;
-                font-size: 0.9em;
-            }
-            .game-container {
-                padding: 10px;
             }
         }
     </style>
@@ -277,8 +274,8 @@
             { name: 'apple', emoji: '🍎', type: 'good' },
             { name: 'banana', emoji: '🍌', type: 'good' },
             { name: 'grape', emoji: '🍇', type: 'good' },
-            { name: 'lemon', emoji: '�', type: 'good' },
-            { name: 'orange', emoji: '🍊', type: 'good' },
+            { name: 'lemon', emoji: '🍋', type: 'good' },
+            { name: 'orange', emoji: '�', type: 'good' },
             // Bad objects (bombs, knives)
             { name: 'bomb', emoji: '💣', type: 'bad' },
             { name: 'knife', emoji: '🔪', type: 'bad' }
@@ -358,11 +355,26 @@
 
         // Function to resize the canvas dynamically
         function resizeCanvas() {
-            canvas.width = Math.min(window.innerWidth * 0.8, 600); // Max width 600px or 80% of window
-            canvas.height = Math.min(window.innerHeight * 0.6, 400); // Max height 400px or 60% of window
+            // Set canvas width based on window size, max 600px
+            canvas.width = Math.min(window.innerWidth * 0.8, 600);
+
+            // Calculate available height for canvas on mobile
+            // Estimate heights of other elements (h1, controls, score, message)
+            const headerHeight = document.querySelector('h1').offsetHeight;
+            const controlsHeight = document.querySelector('.controls').offsetHeight;
+            const scoreLivesHeight = document.querySelector('.score-lives-container').offsetHeight;
+            const mobileControlsHeight = document.querySelector('.mobile-canvas-controls').offsetHeight;
+            const messageHeight = document.querySelector('.game-message').offsetHeight;
+            const containerPadding = 40; // Approx total vertical padding of game-container (20px top + 20px bottom)
+
+            // Calculate remaining height for canvas
+            let availableHeight = window.innerHeight - headerHeight - controlsHeight - scoreLivesHeight - mobileControlsHeight - messageHeight - containerPadding;
+
+            // Ensure canvas has a minimum height and doesn't exceed a max height
+            canvas.height = Math.max(200, Math.min(availableHeight, 400)); // Min 200px, Max 400px
 
             // Adjust player initial position after resize
-            // Elevated by 30px from the bottom to ensure visibility
+            // Elevated by 30px from the bottom of the canvas
             player.x = (canvas.width - player.width) / 2;
             player.y = canvas.height - player.height - 30;
         }
